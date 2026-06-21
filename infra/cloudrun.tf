@@ -1,50 +1,16 @@
-resource "google_project_service" "apis" {
+resource "google_project_service" "run_apis" {
   for_each = toset([
     "run.googleapis.com",
-    "sqladmin.googleapis.com",
     "iam.googleapis.com"
   ])
   service            = each.key
   disable_on_destroy = false
 }
 
-resource "random_id" "db_suffix" {
-  byte_length = 4
-}
-
-resource "google_sql_database_instance" "instance" {
-  name             = "quotes-db-instance-${random_id.db_suffix.hex}"
-  database_version = "POSTGRES_15"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-
-    ip_configuration {
-      ipv4_enabled = true
-    }
-  }
-
-  deletion_protection = false
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_sql_database" "database" {
-  name     = var.db_name
-  instance = google_sql_database_instance.instance.name
-}
-
-resource "google_sql_user" "user" {
-  name     = var.db_user
-  instance = google_sql_database_instance.instance.name
-  password = var.db_password
-}
-
 resource "google_service_account" "cloud_run_sa" {
   account_id   = "quotes-api-run-sa"
   display_name = "Service Account for Quotes API Cloud Run"
-  depends_on   = [google_project_service.apis]
+  depends_on   = [google_project_service.run_apis]
 }
 
 resource "google_project_iam_member" "cloudsql_client" {
@@ -99,7 +65,7 @@ resource "google_cloud_run_v2_service" "api_service" {
   deletion_protection = false
 
   depends_on = [
-    google_project_service.apis,
+    google_project_service.run_apis,
     google_sql_database_instance.instance,
     google_project_iam_member.cloudsql_client
   ]
