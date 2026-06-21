@@ -6,7 +6,7 @@
 
 **Architecture:** Layered Controller-Service-Repository Pattern. Database operations are strictly encapsulated in Repository classes, coordinated by Services, invoked by Express Controllers, and bound to Routers.
 
-**Tech Stack:** Express.js, TypeScript, Prisma ORM, Node.js (v22), PostgreSQL, native Node.js Test Runner, and `tsx` for execution.
+**Tech Stack:** Express.js, TypeScript, Prisma ORM, Node.js (v24), PostgreSQL, native Node.js Test Runner, and `tsx` for execution.
 
 ## Global Constraints
 
@@ -694,7 +694,7 @@ This task is fully completed. Files `package.json`, `tsconfig.json`, `.env`, and
   Create `Dockerfile` optimized for GCP Cloud Run and Node sizing.
   ```dockerfile
   # --- Build Stage ---
-  FROM node:22-alpine AS builder
+  FROM node:24-alpine AS builder
 
   WORKDIR /app
 
@@ -711,7 +711,7 @@ This task is fully completed. Files `package.json`, `tsconfig.json`, `.env`, and
   RUN npm run build
 
   # --- Production Stage ---
-  FROM node:22-alpine AS runner
+  FROM node:24-alpine AS runner
 
   WORKDIR /app
 
