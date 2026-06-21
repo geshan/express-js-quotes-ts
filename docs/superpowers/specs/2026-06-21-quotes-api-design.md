@@ -40,6 +40,7 @@ generator client {
 model Author {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  email     String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   quotes    Quote[]
@@ -71,6 +72,7 @@ Lists all authors in the database.
     {
       "id": 1,
       "name": "Bjarne Stroustrup",
+      "email": "bjarne@stroustrup.com",
       "createdAt": "2026-06-21T03:00:00.000Z",
       "updatedAt": "2026-06-21T03:00:00.000Z"
     }
@@ -82,7 +84,8 @@ Explicitly creates a new author.
 - **Request Body:**
   ```json
   {
-    "name": "Dennis Ritchie"
+    "name": "Dennis Ritchie",
+    "email": "dennis@bell-labs.com"
   }
   ```
 - **Response (201 Created):**
@@ -90,6 +93,7 @@ Explicitly creates a new author.
   {
     "id": 2,
     "name": "Dennis Ritchie",
+    "email": "dennis@bell-labs.com",
     "createdAt": "2026-06-21T03:01:00.000Z",
     "updatedAt": "2026-06-21T03:01:00.000Z"
   }
