@@ -25,7 +25,7 @@ graph TD
 
 ## 2. Database Schema
 
-We define a 1-to-many relationship between `Author` and `Quote`. A single author can write multiple quotes.
+We define a 1-to-many relationship between the `author` and `quote` tables using lowercase table names and snake_case column names.
 
 ```prisma
 datasource db {
@@ -37,22 +37,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Author {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  email     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  quotes    Quote[]
+model author {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  email      String?  @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  quotes     quote[]
 }
 
-model Quote {
-  id        Int      @id @default(autoincrement())
-  text      String
-  authorId  Int
-  author    Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model quote {
+  id         Int      @id @default(autoincrement())
+  text       String
+  author_id  Int
+  author     author   @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 ```
 
@@ -73,8 +73,8 @@ Lists all authors in the database.
       "id": 1,
       "name": "Bjarne Stroustrup",
       "email": "bjarne@stroustrup.com",
-      "createdAt": "2026-06-21T03:00:00.000Z",
-      "updatedAt": "2026-06-21T03:00:00.000Z"
+      "created_at": "2026-06-21T03:00:00.000Z",
+      "updated_at": "2026-06-21T03:00:00.000Z"
     }
   ]
   ```
@@ -94,8 +94,8 @@ Explicitly creates a new author.
     "id": 2,
     "name": "Dennis Ritchie",
     "email": "dennis@bell-labs.com",
-    "createdAt": "2026-06-21T03:01:00.000Z",
-    "updatedAt": "2026-06-21T03:01:00.000Z"
+    "created_at": "2026-06-21T03:01:00.000Z",
+    "updated_at": "2026-06-21T03:01:00.000Z"
   }
   ```
 - **Errors:**
@@ -114,12 +114,13 @@ Lists all quotes with nested author information.
     {
       "id": 1,
       "text": "There are only two kinds of languages: the ones people complain about and the ones nobody uses.",
-      "authorId": 1,
-      "createdAt": "2026-06-21T03:00:00.000Z",
-      "updatedAt": "2026-06-21T03:00:00.000Z",
+      "author_id": 1,
+      "created_at": "2026-06-21T03:00:00.000Z",
+      "updated_at": "2026-06-21T03:00:00.000Z",
       "author": {
         "id": 1,
-        "name": "Bjarne Stroustrup"
+        "name": "Bjarne Stroustrup",
+        "email": "bjarne@stroustrup.com"
       }
     }
   ]
@@ -132,12 +133,13 @@ Fetch a single quote by its integer ID.
   {
     "id": 1,
     "text": "There are only two kinds of languages: the ones people complain about and the ones nobody uses.",
-    "authorId": 1,
-    "createdAt": "2026-06-21T03:00:00.000Z",
-    "updatedAt": "2026-06-21T03:00:00.000Z",
+    "author_id": 1,
+    "created_at": "2026-06-21T03:00:00.000Z",
+    "updated_at": "2026-06-21T03:00:00.000Z",
     "author": {
       "id": 1,
-      "name": "Bjarne Stroustrup"
+      "name": "Bjarne Stroustrup",
+      "email": "bjarne@stroustrup.com"
     }
   }
   ```
@@ -150,7 +152,7 @@ Creates a new quote with **Dynamic Author Resolution**. If the provided author n
   ```json
   {
     "text": "There are only two kinds of languages: the ones people complain about and the ones nobody uses.",
-    "authorName": "Bjarne Stroustrup"
+    "author_name": "Bjarne Stroustrup"
   }
   ```
 - **Response (201 Created):**
@@ -158,13 +160,13 @@ Creates a new quote with **Dynamic Author Resolution**. If the provided author n
   {
     "id": 1,
     "text": "There are only two kinds of languages: the ones people complain about and the ones nobody uses.",
-    "authorId": 1,
-    "createdAt": "2026-06-21T03:00:00.000Z",
-    "updatedAt": "2026-06-21T03:00:00.000Z"
+    "author_id": 1,
+    "created_at": "2026-06-21T03:00:00.000Z",
+    "updated_at": "2026-06-21T03:00:00.000Z"
   }
   ```
 - **Errors:**
-  - `400 Bad Request` if `text` or `authorName` is missing/empty.
+  - `400 Bad Request` if `text` or `author_name` is missing/empty.
 
 ---
 

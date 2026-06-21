@@ -17,108 +17,13 @@
 - Database Keys: Auto-incrementing Integers (1, 2, 3...)
 - API Feature: Dynamic Author Resolution on quote creation (creates the author if not exists, otherwise connects)
 - Testing: Native Node.js Test Runner (`node --test`) using `tsx` for TS compilation
+- Schema naming conventions: Lowercase table names (`author`, `quote`) and snake_case column names (`created_at`, `updated_at`, `author_id`).
 
 ---
 
-### Task 1: Basic Scaffolding & Configuration
+### Task 1: Basic Scaffolding & Configuration [COMPLETED]
 
-**Files:**
-- Create: `package.json`
-- Create: `tsconfig.json`
-- Create: `.env`
-- Test: `tests/smoke.test.ts`
-
-**Interfaces:**
-- Consumes: None (starting project scaffolding)
-- Produces: Complete TS and Node execution/test pipeline
-
-- [ ] **Step 1: Write package.json**
-  Create `package.json` with the required scripts and dependencies.
-  ```json
-  {
-    "name": "express-js-quotes-ts",
-    "version": "1.0.0",
-    "description": "Quotes REST API with Express, TypeScript, and Prisma",
-    "main": "dist/server.js",
-    "scripts": {
-      "dev": "tsx watch src/server.ts",
-      "build": "tsc",
-      "start": "node dist/server.js",
-      "test": "node --import tsx --test tests/**/*.test.ts",
-      "prisma:migrate": "prisma migrate dev",
-      "prisma:generate": "prisma generate",
-      "prisma:seed": "prisma db seed"
-    },
-    "dependencies": {
-      "@prisma/client": "^5.14.0",
-      "cors": "^2.8.5",
-      "dotenv": "^16.4.5",
-      "express": "^4.19.2"
-    },
-    "devDependencies": {
-      "@types/cors": "^2.8.17",
-      "@types/express": "^4.17.21",
-      "@types/node": "^20.12.12",
-      "prisma": "^5.14.0",
-      "tsx": "^4.10.5",
-      "typescript": "^5.4.5"
-    },
-    "prisma": {
-      "seed": "tsx prisma/seed.ts"
-    }
-  }
-  ```
-
-- [ ] **Step 2: Write tsconfig.json**
-  Create a strict TS compiler config.
-  ```json
-  {
-    "compilerOptions": {
-      "target": "ES2022",
-      "module": "NodeNext",
-      "moduleResolution": "NodeNext",
-      "lib": ["ES2022"],
-      "outDir": "./dist",
-      "rootDir": "./src",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "resolveJsonModule": true
-    },
-    "include": ["src/**/*"]
-  }
-  ```
-
-- [ ] **Step 3: Write environmental config .env**
-  Create `.env` containing local dev variables.
-  ```env
-  PORT=3000
-  DATABASE_URL="postgresql://postgres:postgres@localhost:5432/quotes?schema=public"
-  ```
-
-- [ ] **Step 4: Create a smoke test**
-  Create `tests/smoke.test.ts` using Node's native test runner to verify TS setup.
-  ```typescript
-  import { test } from "node:test";
-  import assert from "node:assert";
-
-  test("Smoke Test: TypeScript environment verification", () => {
-    const greeting: string = "Hello, TypeScript!";
-    assert.strictEqual(greeting, "Hello, TypeScript!");
-  });
-  ```
-
-- [ ] **Step 5: Install dependencies and run smoke test**
-  Run: `npm install`
-  Run test: `npm run test`
-  Expected: PASS
-
-- [ ] **Step 6: Commit Task 1**
-  ```bash
-  git add package.json tsconfig.json .env tests/smoke.test.ts
-  git commit -m "feat: scaffold TS Express project with smoke test"
-  ```
+This task is fully completed. Files `package.json`, `tsconfig.json`, `.env`, and `tests/smoke.test.ts` exist and smoke tests are passing cleanly.
 
 ---
 
@@ -133,8 +38,8 @@
 - Consumes: Prisma config and dependency pipeline (Task 1)
 - Produces: `db` client instance (exporting `prisma: PrismaClient`)
 
-- [ ] **Step 1: Write prisma/schema.prisma**
-  Create the Prisma schema model incorporating the optional unique email field on the `Author` table.
+- [x] **Step 1: Write prisma/schema.prisma**
+  Create the Prisma schema model incorporating lowercase model names and snake_case column names.
   ```prisma
   datasource db {
     provider = "postgresql"
@@ -145,26 +50,26 @@
     provider = "prisma-client-js"
   }
 
-  model Author {
-    id        Int      @id @default(autoincrement())
-    name      String   @unique
-    email     String?  @unique
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    quotes    Quote[]
+  model author {
+    id         Int      @id @default(autoincrement())
+    name       String   @unique
+    email      String?  @unique
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    quotes     quote[]
   }
 
-  model Quote {
-    id        Int      @id @default(autoincrement())
-    text      String
-    authorId  Int
-    author    Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  model quote {
+    id         Int      @id @default(autoincrement())
+    text       String
+    author_id  Int
+    author     author   @relation(fields: [author_id], references: [id], onDelete: Cascade)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
   }
   ```
 
-- [ ] **Step 2: Write database configuration**
+- [x] **Step 2: Write database configuration**
   Create `src/config/database.ts` for database connection pooling and Client exporting.
   ```typescript
   import { PrismaClient } from "@prisma/client";
@@ -174,12 +79,11 @@
   });
   ```
 
-- [ ] **Step 3: Run database migration locally**
-  Before writing database integration tests, ensure a local Postgres instance is running (e.g. docker-compose or manual local install), then execute migrations:
-  Run: `npx prisma migrate dev --name init`
-  Expected: Success, prints out migrated tables and generates client.
+- [x] **Step 3: Run database migration locally**
+  Run: `npx prisma migrate dev --name rename_to_snake_case`
+  Expected: Success.
 
-- [ ] **Step 4: Create a database connection verification test**
+- [x] **Step 4: Create a database connection verification test**
   Create `tests/database.test.ts` to verify basic Prisma connectivity.
   ```typescript
   import { test, after } from "node:test";
@@ -200,15 +104,12 @@
   });
   ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
   Run: `npm run test`
-  Expected: PASS (smoke and database connectivity)
+  Expected: PASS
 
-- [ ] **Step 6: Commit Task 2**
-  ```bash
-  git add prisma/schema.prisma src/config/database.ts tests/database.test.ts
-  git commit -m "feat: setup Prisma schema and database client config"
-  ```
+- [x] **Step 6: Commit Task 2**
+  `git commit -am "feat: setup Prisma schema and database client config"`
 
 ---
 
@@ -247,10 +148,10 @@
   });
 
   test("AuthorService - create and retrieve author", async () => {
-    const author = await service.createAuthor({ name: "Bjarne Stroustrup", email: "bjarne@stroustrup.com" });
-    assert.strictEqual(author.name, "Bjarne Stroustrup");
-    assert.strictEqual(author.email, "bjarne@stroustrup.com");
-    assert.ok(author.id > 0);
+    const record = await service.createAuthor({ name: "Bjarne Stroustrup", email: "bjarne@stroustrup.com" });
+    assert.strictEqual(record.name, "Bjarne Stroustrup");
+    assert.strictEqual(record.email, "bjarne@stroustrup.com");
+    assert.ok(record.id > 0);
 
     const list = await service.getAllAuthors();
     assert.strictEqual(list.length, 1);
@@ -270,28 +171,28 @@
   Create `src/repositories/author.repository.ts`.
   ```typescript
   import { prisma } from "../src/config/database.ts";
-  import { Author } from "@prisma/client";
+  import { author } from "@prisma/client";
 
   export class AuthorRepository {
-    async create(data: { name: string; email?: string }): Promise<Author> {
+    async create(data: { name: string; email?: string }): Promise<author> {
       return prisma.author.create({
         data,
       });
     }
 
-    async findAll(): Promise<Author[]> {
+    async findAll(): Promise<author[]> {
       return prisma.author.findMany({
         orderBy: { name: "asc" },
       });
     }
 
-    async findByName(name: string): Promise<Author | null> {
+    async findByName(name: string): Promise<author | null> {
       return prisma.author.findUnique({
         where: { name },
       });
     }
 
-    async findByEmail(email: string): Promise<Author | null> {
+    async findByEmail(email: string): Promise<author | null> {
       return prisma.author.findUnique({
         where: { email },
       });
@@ -303,12 +204,12 @@
   Create `src/services/author.service.ts`.
   ```typescript
   import { AuthorRepository } from "../src/repositories/author.repository.ts";
-  import { Author } from "@prisma/client";
+  import { author } from "@prisma/client";
 
   export class AuthorService {
     constructor(private authorRepository: AuthorRepository) {}
 
-    async createAuthor(data: { name: string; email?: string }): Promise<Author> {
+    async createAuthor(data: { name: string; email?: string }): Promise<author> {
       if (!data.name || data.name.trim() === "") {
         throw new Error("Author name is required");
       }
@@ -331,7 +232,7 @@
       });
     }
 
-    async getAllAuthors(): Promise<Author[]> {
+    async getAllAuthors(): Promise<author[]> {
       return this.authorRepository.findAll();
     }
   }
@@ -349,8 +250,8 @@
     create = async (req: Request, res: Response): Promise<void> => {
       try {
         const { name, email } = req.body;
-        const author = await this.authorService.createAuthor({ name, email });
-        res.status(201).json(author);
+        const result = await this.authorService.createAuthor({ name, email });
+        res.status(201).json(result);
       } catch (err: any) {
         if (err.message === "Author name or email already exists") {
           res.status(409).json({ error: err.message });
@@ -440,22 +341,22 @@
     // 1. Create a quote with a completely new author name (should auto-create author)
     const quote1 = await service.createQuote({
       text: "There are only two kinds of languages...",
-      authorName: "Bjarne Stroustrup",
+      author_name: "Bjarne Stroustrup",
     });
     assert.strictEqual(quote1.text, "There are only two kinds of languages...");
-    assert.ok(quote1.authorId > 0);
+    assert.ok(quote1.author_id > 0);
 
     // Verify author was dynamically created
-    const author = await prisma.author.findUnique({ where: { id: quote1.authorId } });
-    assert.ok(author);
-    assert.strictEqual(author.name, "Bjarne Stroustrup");
+    const record = await prisma.author.findUnique({ where: { id: quote1.author_id } });
+    assert.ok(record);
+    assert.strictEqual(record.name, "Bjarne Stroustrup");
 
     // 2. Create another quote with the SAME author name (should link to existing author)
     const quote2 = await service.createQuote({
       text: "C++ makes it harder to shoot yourself in the foot...",
-      authorName: "Bjarne Stroustrup",
+      author_name: "Bjarne Stroustrup",
     });
-    assert.strictEqual(quote2.authorId, quote1.authorId);
+    assert.strictEqual(quote2.author_id, quote1.author_id);
 
     // 3. List all quotes (includes author)
     const quotes = await service.getAllQuotes();
@@ -466,7 +367,7 @@
   test("QuoteService - fetch by ID", async () => {
     const created = await service.createQuote({
       text: "Simple is better than complex.",
-      authorName: "Tim Peters",
+      author_name: "Tim Peters",
     });
 
     const quote = await service.getQuoteById(created.id);
@@ -480,9 +381,9 @@
   Create `src/repositories/quote.repository.ts`.
   ```typescript
   import { prisma } from "../src/config/database.ts";
-  import { Quote } from "@prisma/client";
+  import { quote } from "@prisma/client";
 
-  type QuoteWithAuthor = Quote & {
+  type QuoteWithAuthor = quote & {
     author: {
       id: number;
       name: string;
@@ -491,14 +392,14 @@
   };
 
   export class QuoteRepository {
-    async createWithDynamicAuthor(text: string, authorName: string): Promise<Quote> {
+    async createWithDynamicAuthor(text: string, author_name: string): Promise<quote> {
       return prisma.quote.create({
         data: {
           text,
           author: {
             connectOrCreate: {
-              where: { name: authorName },
-              create: { name: authorName },
+              where: { name: author_name },
+              create: { name: author_name },
             },
           },
         },
@@ -516,12 +417,12 @@
             },
           },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { created_at: "desc" },
       }) as Promise<QuoteWithAuthor[]>;
     }
 
     async findById(id: number): Promise<QuoteWithAuthor | null> {
-      return prisma.quote.findUnique({
+      return prisma.quote.findById({
         where: { id },
         include: {
           author: {
@@ -541,22 +442,22 @@
   Create `src/services/quote.service.ts`.
   ```typescript
   import { QuoteRepository } from "../src/repositories/quote.repository.ts";
-  import { Quote } from "@prisma/client";
+  import { quote } from "@prisma/client";
 
   export class QuoteService {
     constructor(private quoteRepository: QuoteRepository) {}
 
-    async createQuote(data: { text: string; authorName: string }): Promise<Quote> {
+    async createQuote(data: { text: string; author_name: string }): Promise<quote> {
       if (!data.text || data.text.trim() === "") {
         throw new Error("Quote text is required");
       }
-      if (!data.authorName || data.authorName.trim() === "") {
+      if (!data.author_name || data.author_name.trim() === "") {
         throw new Error("Author name is required");
       }
 
       return this.quoteRepository.createWithDynamicAuthor(
         data.text.trim(),
-        data.authorName.trim()
+        data.author_name.trim()
       );
     }
 
@@ -585,9 +486,9 @@
 
     create = async (req: Request, res: Response): Promise<void> => {
       try {
-        const { text, authorName } = req.body;
-        const quote = await this.quoteService.createQuote({ text, authorName });
-        res.status(201).json(quote);
+        const { text, author_name } = req.body;
+        const result = await this.quoteService.createQuote({ text, author_name });
+        res.status(201).json(result);
       } catch (err: any) {
         res.status(400).json({ error: err.message });
       }
@@ -714,7 +615,7 @@
   ```
 
 - [ ] **Step 4: Create Database Seeder**
-  Create `prisma/seed.ts` featuring Bjarne Stroustrup and other tech pioneers.
+  Create `prisma/seed.ts` featuring Bjarne Stroustrup and other tech pioneers using updated lowercase models and snake_case fields.
   ```typescript
   import { PrismaClient } from "@prisma/client";
 
@@ -910,7 +811,7 @@
   ```
 
   ### 9. Run Database Migrations in Cloud Run environment
-  To initialize schema inside Cloud SQL production database, you can run a temporary cloud run job or run migrations locally by white-listing your local IP address momentarily or running Cloud SQL Auth Proxy on your local workstation.
+  To initialize schema inside Cloud SQL production database, you can run migrations locally by tunnel:
   ```bash
   # Local authentication proxy tunnel execution
   ./cloud-sql-proxy $INSTANCE_CONNECTION_NAME
