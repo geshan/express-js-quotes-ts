@@ -66,6 +66,13 @@ docker compose up --build
 ```
 This single command handles service compilation, database health checks, dependencies ordering, and exposes the REST API at **`http://localhost:3000`**.
 
+### Running Tests inside Docker Compose
+To execute the application integration test suite inside a dedicated, isolated Docker container containerized against the compose Postgres database, run:
+```bash
+docker compose --profile test run --rm test
+```
+This automatically builds the test-stage image, boots the DB container, waits for the DB container to be healthy, executes the Node.js native test runner, and prints the result.
+
 ---
 
 ## 📖 API Documentation & cURL Examples
