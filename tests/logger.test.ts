@@ -1,0 +1,134 @@
+import { test } from "node:test";
+import assert from "node:assert";
+import winston from "winston";
+import { logger } from "../src/utils/logger.js";
+import { trace, context, TraceFlags } from "@opentelemetry/api";
+import { AsyncHooksContextManager } from "@opentelemetry/context-async-hooks";
+
+// Register the AsyncHooksContextManager to enable context propagation in test environment
+const contextManager = new AsyncHooksContextManager();
+contextManager.enable();
+context.setGlobalContextManager(contextManager);
+
+test("Winston Logger - PII Masking and Redaction Formatter", () => {
+  const logs: any[] = [];
+  
+  // Custom transport to capture logs
+  class MemoryTransport extends winston.Transport {
+    log(info: any, callback: () => void) {
+      logs.push(info);
+      if (callback) {
+        callback();
+      }
+    }
+  }
+
+  const memoryTransport = new MemoryTransport();
+  logger.add(memoryTransport);
+
+  try {
+    // 1. Direct log message redaction (string message)
+    logger.info("Please contact customer-support@test.com or call +1 555-555-0199 for help.");
+
+    // 2. Metadata redaction for sensitive keys and nested fields
+    logger.info("User details login attempt", {
+      password: "secretpassword123",
+      token: "bearer-token-abc",
+      apiKey: "key-12345",
+      user: {
+        email: "user@domain.com",
+        phone: "555-555-0199",
+        name: "John Doe"
+      }
+    });
+
+    assert.strictEqual(logs.length, 2);
+
+    // Verify first log message is redacted
+    assert.ok(logs[0].message.includes("[REDACTED_EMAIL]"), "Email in first log message was not redacted");
+    assert.ok(logs[0].message.includes("[REDACTED_PHONE]"), "Phone in first log message was not redacted");
+
+    // Verify second log metadata redactions
+    assert.strictEqual(logs[1].password, "[REDACTED]", "Password was not redacted in metadata");
+    assert.strictEqual(logs[1].token, "[REDACTED]", "Token was not redacted in metadata");
+    assert.strictEqual(logs[1].apiKey, "[REDACTED]", "apiKey was not redacted in metadata");
+    assert.strictEqual(logs[1].user.email, "[REDACTED]", "Nested email sensitive key was not redacted in metadata");
+    assert.strictEqual(logs[1].user.phone, "[REDACTED_PHONE]", "Nested phone number was not redacted in metadata");
+    assert.strictEqual(logs[1].user.name, "John Doe", "Non-sensitive user name was incorrectly redacted");
+
+  } finally {
+    logger.remove(memoryTransport);
+  }
+});
+
+test("Winston Logger - OpenTelemetry Trace Correlation Formatter", () => {
+  const logs: any[] = [];
+  
+  class MemoryTransport extends winston.Transport {
+    log(info: any, callback: () => void) {
+      logs.push(info);
+      if (callback) {
+        callback();
+      }
+    }
+  }
+
+  const memoryTransport = new MemoryTransport();
+  logger.add(memoryTransport);
+
+  try {
+    // Define a mock OpenTelemetry active span context
+    const mockSpanContext = {
+      traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
+      spanId: "00f067aa0ba902b7",
+      traceFlags: TraceFlags.SAMPLED,
+    };
+    const mockSpan = trace.wrapSpanContext(mockSpanContext);
+
+    // Set mock GCP project env variables to verify full prefix format
+    process.env.GCP_PROJECT = "my-gcp-project-123";
+
+    context.with(trace.setSpan(context.active(), mockSpan), () => {
+      logger.info("Log statement inside active span");
+    });
+
+    assert.strictEqual(logs.length, 1);
+    const logResult = logs[0];
+
+    // Assert trace and span propagation properties are correctly added
+    assert.strictEqual(
+      logResult["logging.googleapis.com/trace"],
+      "projects/my-gcp-project-123/traces/4bf92f3577b34da6a3ce929d0e0e4736",
+      "Trace ID with GCP Project prefix was not correctly correlated"
+    );
+    assert.strictEqual(
+      logResult["logging.googleapis.com/spanId"],
+      "00f067aa0ba902b7",
+      "Span ID was not correctly correlated"
+    );
+    assert.strictEqual(
+      logResult["logging.googleapis.com/trace_sampled"],
+      true,
+      "Trace Sampled flag was not correctly correlated"
+    );
+
+    // Clean up env variables and test without project ID prefix
+    delete process.env.GCP_PROJECT;
+    delete process.env.GOOGLE_CLOUD_PROJECT;
+    logs.length = 0;
+
+    context.with(trace.setSpan(context.active(), mockSpan), () => {
+      logger.info("Log statement without GCP project env");
+    });
+
+    assert.strictEqual(logs.length, 1);
+    assert.strictEqual(
+      logs[0]["logging.googleapis.com/trace"],
+      "4bf92f3577b34da6a3ce929d0e0e4736",
+      "Trace ID without prefix was not correctly correlated"
+    );
+
+  } finally {
+    logger.remove(memoryTransport);
+  }
+});
