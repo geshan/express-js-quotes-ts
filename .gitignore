@@ -58,3 +58,7 @@ coverage/
 # OS files
 .DS_Store
 Thumbs.db
+
+# terraform
+infra/.terraform.lock.hcl
+infra/.terraform

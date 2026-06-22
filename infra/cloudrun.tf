@@ -62,8 +62,6 @@ resource "google_cloud_run_v2_service" "api_service" {
     percent = 100
   }
 
-  deletion_protection = false
-
   depends_on = [
     google_project_service.run_apis,
     google_sql_database_instance.instance,
