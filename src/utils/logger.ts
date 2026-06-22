@@ -22,27 +22,75 @@ const traceCorrelationFormat = winston.format((info) => {
 
 // Formatter to recursively redact PII from log arguments
 const piiMaskingFormat = winston.format((info) => {
-  const redactObject = (obj: any): any => {
+  const redactObject = (obj: any, visited = new WeakSet<any>()): any => {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
     if (typeof obj === "string") {
       return redactPii(obj);
     }
-    if (Array.isArray(obj)) {
-      return obj.map(redactObject);
+
+    if (typeof obj !== "object") {
+      return obj;
     }
+
+    // Circular reference protection for reference types
+    if (visited.has(obj)) {
+      return "[Circular]";
+    }
+    visited.add(obj);
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => redactObject(item, visited));
+    }
+
     if (obj instanceof Date || obj instanceof RegExp) {
       return obj;
     }
+
+    if (obj instanceof Set) {
+      // Serialize Set to an array (recursively redacted)
+      return redactObject(Array.from(obj), visited);
+    }
+
+    if (obj instanceof Map) {
+      // Serialize Map to a plain object (recursively redacted)
+      const plainObj: any = {};
+      for (const [key, val] of obj.entries()) {
+        const keyStr = String(key);
+        const sensitiveKeys = ["password", "token", "authorization", "secret", "email", "apikey"];
+        if (sensitiveKeys.includes(keyStr.toLowerCase())) {
+          plainObj[keyStr] = "[REDACTED]";
+        } else {
+          plainObj[keyStr] = redactObject(val, visited);
+        }
+      }
+      return plainObj;
+    }
+
     if (obj instanceof Error) {
       const errorObj: any = {
         name: obj.name,
         message: redactPii(obj.message),
         stack: obj.stack ? redactPii(obj.stack) : undefined,
       };
-      for (const key of Object.keys(obj)) {
-        errorObj[key] = redactObject((obj as any)[key]);
+      // Capture prototype and other non-enumerable properties recursively using Object.getOwnPropertyNames
+      const propNames = Object.getOwnPropertyNames(obj);
+      for (const key of propNames) {
+        if (key === "name" || key === "message" || key === "stack") {
+          continue;
+        }
+        const sensitiveKeys = ["password", "token", "authorization", "secret", "email", "apikey"];
+        if (sensitiveKeys.includes(key.toLowerCase())) {
+          errorObj[key] = "[REDACTED]";
+        } else {
+          errorObj[key] = redactObject((obj as any)[key], visited);
+        }
       }
       return errorObj;
     }
+
     if (obj !== null && typeof obj === "object") {
       const result: any = {};
       for (const key of Object.keys(obj)) {
@@ -50,11 +98,12 @@ const piiMaskingFormat = winston.format((info) => {
         if (sensitiveKeys.includes(key.toLowerCase())) {
           result[key] = "[REDACTED]";
         } else {
-          result[key] = redactObject(obj[key]);
+          result[key] = redactObject(obj[key], visited);
         }
       }
       return result;
     }
+
     return obj;
   };
 

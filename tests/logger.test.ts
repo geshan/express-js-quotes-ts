@@ -190,3 +190,97 @@ test("Winston Logger - Date, RegExp, and Error preservation and PII masking", ()
     logger.remove(memoryTransport);
   }
 });
+
+test("Winston Logger - Circular Reference Protection", () => {
+  const logs: any[] = [];
+  
+  class MemoryTransport extends winston.Transport {
+    log(info: any, callback: () => void) {
+      logs.push(info);
+      if (callback) {
+        callback();
+      }
+    }
+  }
+
+  const memoryTransport = new MemoryTransport();
+  logger.add(memoryTransport);
+
+  try {
+    const circularObj: any = {
+      name: "Main",
+    };
+    circularObj.self = circularObj; // Self circular reference
+    
+    const nestedCircularObj: any = {
+      name: "Nested",
+    };
+    nestedCircularObj.parent = circularObj;
+    circularObj.child = nestedCircularObj; // Indirect circular reference
+
+    logger.info("Logging circular objects", {
+      data: circularObj,
+    });
+
+    assert.strictEqual(logs.length, 1);
+    const logResult = logs[0];
+
+    assert.strictEqual(logResult.data.name, "Main");
+    assert.strictEqual(logResult.data.self, "[Circular]");
+    assert.strictEqual(logResult.data.child.name, "Nested");
+    assert.strictEqual(logResult.data.child.parent, "[Circular]");
+
+  } finally {
+    logger.remove(memoryTransport);
+  }
+});
+
+test("Winston Logger - Map & Set logs redaction and serialization", () => {
+  const logs: any[] = [];
+  
+  class MemoryTransport extends winston.Transport {
+    log(info: any, callback: () => void) {
+      logs.push(info);
+      if (callback) {
+        callback();
+      }
+    }
+  }
+
+  const memoryTransport = new MemoryTransport();
+  logger.add(memoryTransport);
+
+  try {
+    const testSet = new Set(["normal-value", "secret-password-to-redact@example.com", "555-555-0199"]);
+    
+    const testMap = new Map<string, any>([
+      ["normalKey", "normal-value"],
+      ["password", "secret-password-123"],
+      ["nested", { email: "user@domain.com" }]
+    ]);
+
+    logger.info("Logging Maps and Sets", {
+      mySet: testSet,
+      myMap: testMap,
+    });
+
+    assert.strictEqual(logs.length, 1);
+    const logResult = logs[0];
+
+    // Assert Set has been serialized to Array and redacted recursively
+    assert.ok(Array.isArray(logResult.mySet), "Set was not serialized to an Array");
+    assert.strictEqual(logResult.mySet[0], "normal-value");
+    assert.strictEqual(logResult.mySet[1], "[REDACTED_EMAIL]");
+    assert.strictEqual(logResult.mySet[2], "[REDACTED_PHONE]");
+
+    // Assert Map has been serialized to a Plain Object and redacted recursively
+    assert.ok(logResult.myMap !== null && typeof logResult.myMap === "object" && !Array.isArray(logResult.myMap), "Map was not serialized to a plain Object");
+    assert.strictEqual(logResult.myMap.normalKey, "normal-value");
+    assert.strictEqual(logResult.myMap.password, "[REDACTED]");
+    assert.strictEqual(logResult.myMap.nested.email, "[REDACTED]");
+
+  } finally {
+    logger.remove(memoryTransport);
+  }
+});
+
