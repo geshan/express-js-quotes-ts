@@ -132,3 +132,61 @@ test("Winston Logger - OpenTelemetry Trace Correlation Formatter", () => {
     logger.remove(memoryTransport);
   }
 });
+
+test("Winston Logger - Date, RegExp, and Error preservation and PII masking", () => {
+  const logs: any[] = [];
+  
+  class MemoryTransport extends winston.Transport {
+    log(info: any, callback: () => void) {
+      logs.push(info);
+      if (callback) {
+        callback();
+      }
+    }
+  }
+
+  const memoryTransport = new MemoryTransport();
+  logger.add(memoryTransport);
+
+  try {
+    const testDate = new Date("2026-06-22T22:00:00.000Z");
+    const testRegExp = /test-[a-z]+/gi;
+    const testError = new Error("Database connection failed for user john.doe@example.com! Phone: 123-456-7890.");
+    (testError as any).customField = "some-custom-field-value";
+
+    logger.error("Error occurred during operation", {
+      timestamp: testDate,
+      pattern: testRegExp,
+      error: testError,
+    });
+
+    assert.strictEqual(logs.length, 1);
+    const logResult = logs[0];
+
+    // Assert Date is preserved
+    assert.ok(logResult.timestamp instanceof Date, "Date object was not preserved");
+    assert.strictEqual(logResult.timestamp.toISOString(), "2026-06-22T22:00:00.000Z");
+
+    // Assert RegExp is preserved
+    assert.ok(logResult.pattern instanceof RegExp, "RegExp object was not preserved");
+    assert.strictEqual(logResult.pattern.source, "test-[a-z]+");
+
+    // Assert Error is reconstructed and its PII is redacted
+    assert.ok(logResult.error !== null && typeof logResult.error === "object", "Error property is not an object");
+    assert.strictEqual(logResult.error.name, "Error");
+    assert.ok(logResult.error.message.includes("[REDACTED_EMAIL]"), "PII email inside Error message was not redacted");
+    assert.ok(logResult.error.message.includes("[REDACTED_PHONE]"), "PII phone inside Error message was not redacted");
+    assert.ok(!logResult.error.message.includes("john.doe@example.com"), "Original email remained inside Error message");
+    
+    // Assert stack trace PII is redacted
+    assert.ok(typeof logResult.error.stack === "string", "Error stack was not preserved as a string");
+    assert.ok(logResult.error.stack.includes("[REDACTED_EMAIL]"), "PII email inside Error stack was not redacted");
+    assert.ok(logResult.error.stack.includes("[REDACTED_PHONE]"), "PII phone inside Error stack was not redacted");
+
+    // Assert custom properties on Error are recursively handled
+    assert.strictEqual(logResult.error.customField, "some-custom-field-value");
+
+  } finally {
+    logger.remove(memoryTransport);
+  }
+});

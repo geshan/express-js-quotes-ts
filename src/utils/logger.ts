@@ -29,6 +29,20 @@ const piiMaskingFormat = winston.format((info) => {
     if (Array.isArray(obj)) {
       return obj.map(redactObject);
     }
+    if (obj instanceof Date || obj instanceof RegExp) {
+      return obj;
+    }
+    if (obj instanceof Error) {
+      const errorObj: any = {
+        name: obj.name,
+        message: redactPii(obj.message),
+        stack: obj.stack ? redactPii(obj.stack) : undefined,
+      };
+      for (const key of Object.keys(obj)) {
+        errorObj[key] = redactObject((obj as any)[key]);
+      }
+      return errorObj;
+    }
     if (obj !== null && typeof obj === "object") {
       const result: any = {};
       for (const key of Object.keys(obj)) {
