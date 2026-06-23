@@ -118,12 +118,14 @@ const piiMaskingFormat = winston.format((info) => {
   return redactedInfo;
 });
 
+const isProduction = process.env.NODE_ENV === "production" || process.env.ENABLE_GCP_TRACE === "true";
+
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: winston.format.combine(
     traceCorrelationFormat(),
     piiMaskingFormat(),
-    winston.format.json()
+    isProduction ? winston.format.json() : winston.format.combine(winston.format.colorize(), winston.format.simple())
   ),
   transports: [
     new winston.transports.Console()

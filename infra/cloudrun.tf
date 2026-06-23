@@ -19,6 +19,12 @@ resource "google_project_iam_member" "cloudsql_client" {
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+resource "google_project_iam_member" "cloudtrace_agent" {
+  project = var.project_id
+  role    = "roles/cloudtrace.agent"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
 resource "google_cloud_run_v2_service" "api_service" {
   name     = "quotes-api-service"
   location = var.region
@@ -39,8 +45,8 @@ resource "google_cloud_run_v2_service" "api_service" {
       }
 
       env {
-        name  = "PORT"
-        value = "3000"
+        name  = "NODE_ENV"
+        value = "production"
       }
 
       volume_mounts {
@@ -65,7 +71,8 @@ resource "google_cloud_run_v2_service" "api_service" {
   depends_on = [
     google_project_service.run_apis,
     google_sql_database_instance.instance,
-    google_project_iam_member.cloudsql_client
+    google_project_iam_member.cloudsql_client,
+    google_project_iam_member.cloudtrace_agent
   ]
 }
 
