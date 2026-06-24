@@ -1,11 +1,13 @@
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import { Resource } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
+import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
+import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runtime-node";
 import { TraceExporter } from "@google-cloud/opentelemetry-cloud-trace-exporter";
-import { SpanProcessor, ReadableSpan, BatchSpanProcessor, InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { SpanProcessor, ReadableSpan, BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { redactPii } from "./utils/pii.js";
 
 class PiiRedactionProcessor implements SpanProcessor {
@@ -50,12 +52,12 @@ if (isProduction) {
   const traceExporter = new TraceExporter();
   spanProcessors.push(new BatchSpanProcessor(traceExporter));
 } else {
-  const inMemoryExporter = new InMemorySpanExporter();
-  spanProcessors.push(new SimpleSpanProcessor(inMemoryExporter));
+  const consoleExporter = new ConsoleSpanExporter();
+  spanProcessors.push(new SimpleSpanProcessor(consoleExporter));
 }
 
 const sdk = new NodeSDK({
-  resource: resourceFromAttributes({
+  resource: new Resource({
     [ATTR_SERVICE_NAME]: "express-js-quotes-api",
   }),
   spanProcessors,
@@ -63,6 +65,12 @@ const sdk = new NodeSDK({
     new HttpInstrumentation(),
     new ExpressInstrumentation(),
     new PrismaInstrumentation(),
+    new PgInstrumentation({
+      enabled: true,
+      enhancedDatabaseReporting: true,
+      ignoreConnectSpans: true,
+    }),
+    new RuntimeNodeInstrumentation(),
   ],
 });
 
