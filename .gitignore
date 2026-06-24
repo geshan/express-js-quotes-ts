@@ -60,9 +60,9 @@ coverage/
 Thumbs.db
 
 # terraform
-infra/.terraform.lock.hcl
-infra/.terraform
-infra/terraform.tfstate
-infra/terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
 
 cloud-sql-proxy
